@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+	tools {
+             maven 'maven'
+            }
+    stages {
+        stage('Scm Checkout') {
+              steps {
+				  // One or more steps need to be included within the steps block.
+				checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'my-git_credentials', url: 'https://github.com/9652040795/Hello-world.git']]])
+    
+			}
+		}
+		
+        stage('mvn-compile') {
+            steps {
+                // One or more steps need to be included within the steps block.
+               sh 'mvn clean package' 
+            
+            }
+            
+        }
+        stage('unit-test') {
+            steps {
+                archive "target/**/*"
+                junit 'server/target/surefire-reports/*.xml' 
+            }
+                
+        }
+		stage('SonarQube analysis') { 
+		    steps {
+				withSonarQubeEnv('sonarqube') { 
+					sh 'mvn sonar:sonar \
+					     -Dsonar.host.url=http://3.83.243.50:9000 \
+						 -Dsonar.login=4532f71a895b44392f530cdf1a81ceadfcf965c1'
+				}  
+			}  
+        }
+        stage('Depoy to tomcat') {
+            steps {
+                sh 'cp /var/lib/jenkins/workspace/Pipeline/webapp/target/*.war /opt/apache-tomcat-8.5.43/webapps/'
+            }
+        }
+        
+
+        }
+        post {
+			success {
+			    mail to: "hemadri.nageshwarrao91@gmail.com", subject:"SUCCESS: ${currentBuild.fullDisplayName}", body: "yes, we done."
+		
+			} 
+    }
+        
+        
+}
+
+
+    
+    
